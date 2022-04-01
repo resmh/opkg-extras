@@ -1,0 +1,14 @@
+Package: opkg-extras
+Depends: libc, luci-compat
+Source: feeds/resmh/opkg-extras
+SourceName: opkg-extras
+Section: utils
+Maintainer: Mirror
+Architecture: all
+Description: Script presented within opkg-extras section of OpenWRT advanced documentation.
+Installed-Size: 59000
+Filename: opkg-extras.ipk
+Version: 0.1.0
+SourceDateEpoch: 
+Size: 
+SHA256sum: 
