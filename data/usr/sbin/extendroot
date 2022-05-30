@@ -1,0 +1,56 @@
+#!/bin/sh
+
+function doverbose() {
+	logger -t "$(basename "${0%.*}")($DEVNAME)[$$]" -- "$@"
+	echo "$(basename "${0%.*}")[$$]" -- "$@"
+}
+
+function doerr() {
+	logger -st "$(basename "${0%.*}")($DEVNAME)[$$]" -- "$@"
+	echo "$(basename "${0%.*}")[$$]" -- "$@"
+}
+
+if [ ! -f /var/opkg-lists/openwrt_base ] && ! opkg update; then doerr "Unmet prerequisites."; exit 1; fi
+if ! opkg install resize2fs parted; then doerr "Unmet prerequisites."; exit 1; fi
+
+BOOT="$(sed -n -e "/\s\/boot\s.*$/{s///p;q}" /etc/mtab)"
+if [ "${BOOT:0:11}" == "/dev/mmcblk" ]; then
+        DISK="${BOOT%%p[0-9]*}"
+        PART="$((${BOOT##*[^0-9]}+1))"
+        ROOT="${DISK}p${PART}"
+else
+        DISK="${BOOT%%[0-9]*}"
+        PART="$((${BOOT##*[^0-9]}+1))"
+        ROOT="${DISK}${PART}"
+fi
+LOOP="$(losetup -f)"
+NEWSIZE=`printf %s\\n 'unit MB print list' | parted | grep "Disk ${DISK}" | cut -d' ' -f3 | tr -d MB`
+
+doverbose "Resize disk: $DISK"
+doverbose "Resize partition: $ROOT"
+doverbose "Resize to: $NEWSIZE"
+if [ "$1" == "-t" ]; then doverbose "Test mode. Exiting."; exit 0; fi
+if [ -d /opt ] && [ -f /opt/extendroot ] && [ ! "$1" == "-f" ]; then doerr "Already resized. Exiting."; exit 0; fi
+
+doverbose "Resizing root partition..."
+if ! parted $DISK resizepart 2 $NEWSIZE; then doverbose "Failed to resize partition."; exit 3; fi
+
+doverbose "Root partition resized. Reloading partition table..."
+partprobe $DISK
+partprobe $ROOT
+doverbose "Partition table reloaded. Partition work completed."
+
+doverbose "Setting up loop device..."
+if ! losetup ${LOOP} ${ROOT}; then doverbose "Failed to set up loop device."; exit 2; fi
+
+doverbose "Checking rootfs..."
+if ! fsck.ext4 -y $LOOP; then
+        doverbose "Root filesystem not clean. Retrying."
+        if ! fsck.ext4 -y $LOOP; then doverbose "Root filesystem not clean. Aborting."; exit 2; fi
+fi
+
+doverbose "Resizing root filesystem..."
+if ! resize2fs $LOOP; then doverbose "Failed to resize root filesystem."; exit 4; fi
+
+if [ ! -d /opt ]; then mkdir /opt; fi
+exit 0

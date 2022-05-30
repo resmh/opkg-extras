@@ -1,2 +1,3 @@
 /etc/hotplug.d/online/50-opkg-restore
 /etc/profile.d/opkg.sh
+/etc/opkg-restore

@@ -1,4 +1,8 @@
-if [ -f /sbin/extendroot ] && [ -f /etc/extendroot ] && { [ ! -d /opt ] || [ ! -f /opt/extendroot ]; }; then /sbin/extendroot; exit 0; fi
+if [ ! -f /etc/opkg-restore ]; then exit 0; fi
+if [ -f /sbin/extendroot ] && [ -f /etc/extendroot ] && [ -f /etc/extendroot.failed ]; then exit 0; fi
+if [ -f /sbin/extendroot ] && [ -f /etc/extendroot ] && [ ! -f /etc/extendroot.done ]; then
+	if /sbin/extendroot; then touch /etc/extendroot.done; reboot; exit 0; else touch /etc/extendroot.failed; exit 0; fi
+fi
 
 OPKG_CONF="init main"
 for OPKG_CONF in ${OPKG_CONF}
