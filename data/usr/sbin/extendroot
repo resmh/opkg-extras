@@ -10,8 +10,9 @@ function doerr() {
 	echo "$(basename "${0%.*}")[$$]" -- "$@"
 }
 
-if [ ! -f /var/opkg-lists/openwrt_base ] && ! opkg update; then doerr "Unmet prerequisites."; exit 1; fi
-if ! opkg install resize2fs parted; then doerr "Unmet prerequisites."; exit 1; fi
+if [ ! -f /var/opkg-lists/openwrt_base ] && ! opkg update; then doerr "Package lists unavailable."; exit 1; fi
+if ! opkg install losetup resize2fs parted; then doerr "Packages unavailable."; exit 1; fi
+if ! which losetup > /dev/null || ! which resize2fs > /dev/null || ! which parted > /dev/null; then doerr "Packages incorrectly installed."; exit 1; fi
 
 BOOT="$(sed -n -e "/\s\/boot\s.*$/{s///p;q}" /etc/mtab)"
 if [ "${BOOT:0:11}" == "/dev/mmcblk" ]; then
